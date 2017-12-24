@@ -88,8 +88,8 @@ uint8_t MPC8313_LED_Count;
 stm32f4_gpio_config led3config =
 {
 	.fields={
-		.pin_first = STM32F4_GPIO_PIN(3, 12),
-	.pin_last = STM32F4_GPIO_PIN(3, 12),
+		.pin_first = STM32F4_GPIO_PIN(0, 6),
+	.pin_last = STM32F4_GPIO_PIN(0, 7),
 	.mode = STM32F4_GPIO_MODE_OUTPUT,
 	.otype = STM32F4_GPIO_OTYPE_PUSH_PULL,
 	.ospeed = STM32F4_GPIO_OSPEED_2_MHZ,
@@ -100,8 +100,8 @@ stm32f4_gpio_config led3config =
 };
 
 #define LED_INIT() stm32f4_gpio_set_config(&led3config)
-#define LED_ON() stm32f4_gpio_set_output(STM32F4_GPIO_PIN(3,12), 1)
-#define LED_OFF() stm32f4_gpio_set_output(STM32F4_GPIO_PIN(3,12), 0)
+#define LED_ON() stm32f4_gpio_set_output(STM32F4_GPIO_PIN(0,7), 1)
+#define LED_OFF() stm32f4_gpio_set_output(STM32F4_GPIO_PIN(0,7), 0)
 
 #else
 /* default case is to print */

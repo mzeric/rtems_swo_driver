@@ -13,6 +13,8 @@
 #include <fcntl.h>
 #include <rtems/bspIo.h>
 #include <rtems/libio.h>
+#include <bsp/i2c.h>
+#include <dev/i2c/i2c.h>
 
 #include "led.h"
 
@@ -82,9 +84,59 @@ rtems_device_driver swo_ctrl( rtems_device_major_number major,
 	printk("dirver ctrl\n");
 	return RTEMS_SUCCESSFUL;
 }
-#define SWO_DRIVER_TABLE_ENTRY \
-  { swo_init, swo_open, swo_close, \
-    swo_read, swo_write, swo_ctrl }
+/*
+	SEGGER RTT Driver For RTEMS
+	1. void setup_segger_rtt_driver();
+	2. call printf
+
+
+*/
+void segger_rtt_putc(char c){
+	SEGGER_RTT_printf(0, "%c", c);
+}
+rtems_device_driver segger_rtt_init( rtems_device_major_number major,
+		rtems_device_minor_number minor,
+		void *arg){
+	SEGGER_RTT_Init();
+	return RTEMS_SUCCESSFUL;
+}
+rtems_device_driver segger_rtt_open( rtems_device_major_number major,
+		rtems_device_minor_number minor,
+		void *arg){
+	return RTEMS_SUCCESSFUL;
+}
+rtems_device_driver segger_rtt_close( rtems_device_major_number major,
+		rtems_device_minor_number minor,
+		void *arg){
+	return RTEMS_SUCCESSFUL;
+}
+rtems_device_driver segger_rtt_ctrl( rtems_device_major_number major,
+		rtems_device_minor_number minor,
+		void *arg){
+	return RTEMS_SUCCESSFUL;
+}
+rtems_device_driver segger_rtt_read( rtems_device_major_number major,
+		rtems_device_minor_number minor,
+		void *arg){
+	return RTEMS_SUCCESSFUL;
+}
+rtems_device_driver segger_rtt_write( rtems_device_major_number major,
+		rtems_device_minor_number minor,
+		void *arg){
+
+	rtems_libio_rw_args_t * rw_args = (rtems_libio_rw_args_t*) arg;
+	//printk("swo dirver write\n");
+	SEGGER_RTT_printf(0, (char*)rw_args->buffer);
+	return RTEMS_SUCCESSFUL;
+}
+rtems_driver_address_table rtems_segger_rtt_ops = {
+  initialization_entry: segger_rtt_init,
+  open_entry:           segger_rtt_open,
+  close_entry:          segger_rtt_close,
+  read_entry:           segger_rtt_read,
+  write_entry:          segger_rtt_write,
+  control_entry:        segger_rtt_ctrl
+};
 rtems_driver_address_table rtems_swo_io_ops = {
   initialization_entry: swo_init,
   open_entry:           swo_open,
@@ -163,15 +215,54 @@ void setup_swo_stdout(){
 	}
 	printf("swo driver(%d, %d) initialized ok\n", swo_major, swo_minor);
 }
+void setup_segger_rtt_stdout(){
+	rtems_device_major_number rtt_major;
+	rtems_device_minor_number rtt_minor;
+	rtems_status_code ret;
+
+	/* setup output for printk */
+	BSP_output_char = segger_rtt_putc;
+
+	ret = rtems_io_register_driver(0, &rtems_segger_rtt_ops, &rtt_major);
+	if (ret != RTEMS_SUCCESSFUL) {
+		printk("register segger_rtt driver failed:%s\n", rtems_status_text(ret));
+	}
+	rtt_minor = 0;
+	if( (ret = rtems_io_register_name("/dev/segger_rtt", rtt_major, rtt_minor)) != RTEMS_SUCCESSFUL){
+		printk("register /dev/segger_rtt name failed %s\n", rtems_status_text(ret));
+	}
+	//rtems_io_initialize(swo_major, 0, NULL);
+	int fp = open("/dev/segger_rtt", O_RDWR);
+	if (fp < 0){
+		printk("open /dev/segger_rtt failed:%d\n", fp);
+	}else{
+
+		//printk("fp = 0x%x\n", fp);
+		//write(fp, "[SWO]\n", 6);
+		//close(fp);
+		dup2(fp, 1);
+	}
+	printf("segger rtt driver(%d, %d) initialized ok\n", rtt_major, rtt_minor);
+}
 rtems_task Init(
   rtems_task_argument argument
 )
 {
-  setup_swo_stdout();
-  printf("*** LED BLINKER -- timer *** \n");
 
+  SEGGER_RTT_Init();
+  SEGGER_RTT_printf(0, "\r\hello,rtt\r\n");
+  SEGGER_RTT_printf(0, "XXello,rtt\n");
+  SEGGER_RTT_printf(0, "XXello,rtt\n");
+  setup_swo_stdout();
+  //setup_segger_rtt_stdout();
+  printf("*** LED BLINKER -- timer *** \n");
+ //stm32f4_i2c_bus_entry *const stm32f4_i2c2 = &stm32f4_i2c1_entry;
+
+  mpu9250_init();
   LED_INIT();
+  LED_ON();
   printf("init led ok\n");
+  printf("i2c %x\n", STM32F4_I2C1);
 
   (void) rtems_timer_create(rtems_build_name( 'T', 'M', 'R', '1' ), &Timer1);
 
