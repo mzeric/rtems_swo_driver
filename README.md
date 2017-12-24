@@ -1,6 +1,14 @@
 # SWO driver of RTEMS
 the driver and rtems have been tested on  stm32f4-discovery board
 
+## Use in your app
+
+1. call `setup_swo_output()` directly
+1. then use `printf(xxx)`,you will see the output in swv()
+
+### How the driver works
+* register the driver as `/dev/swo`
+* use `dup2` to replace `stdout`, so redirect the stdout to swo when use `printf`
 ## Build
 
 ```
@@ -18,7 +26,7 @@ arm-rtems5-objcopy -Obinary ./o-optimize/timer.exe stm32_rtems_swo_timer.bin
 > reset
 ```
 
-## Get Output
+## Get Output / Use OpenOCD as SWV
 in the openocd configure:
 
 ```
